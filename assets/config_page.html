@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Configure device</title>
+  </head>
+  <body>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+      .f {
+        display: block;
+        float: left;
+      }
+      .c {
+        overflow: auto;
+        border-bottom: 1px solid #000;
+        padding-bottom: 5px;
+      }
+      .l, .t {
+        margin-right: 2px;
+      }
+      .t {
+        width: 150px;
+      }
+    </style>
+    <h1>Configure device</h1>
+    <form action='/save'>
+      <div id='fs'>
+        <div class='c'>
+          <div class='f'>
+            <label class='l'>Wifi Network:</label>
+            <input class='t' name='ssid'>
+          </div>
+          <div class='f'>
+            <label class='l'>Wifi Password:</label>
+            <input class='t' name='password'>
+          </div>
+          <div class='f'>
+            <label class='l'>Device key:</label>
+            <input class='t' name='key'>
+          </div>
+        </div>
+      </div>
+      <div style='margin-top: 10px'>
+        <input type='submit' value='Submit'>
+      </div>
+    </form>
+  </body>
+</html>

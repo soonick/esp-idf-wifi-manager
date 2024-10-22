@@ -1,0 +1,18 @@
+version: 2.1
+
+jobs:
+  verify:
+    machine:
+      image: ubuntu-2204:2023.04.2
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:nJ4fjs8DBnXE5nlOYmIhp+mdPAhHGegiK+RcxQ+2/kA"
+      - checkout
+      - run: make verify
+
+workflows:
+  version: 2
+  verify:
+    jobs:
+      - verify
