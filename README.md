@@ -1,5 +1,7 @@
 # esp-idf-wifi-manager
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/soonick/esp-idf-wifi-manager/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/soonick/esp-idf-wifi-manager/tree/master)
+
 Compatible with ESP-IDF. Starts an access point where users can provide WiFi credentials.
 
 ## How to use
