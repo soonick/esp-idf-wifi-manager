@@ -1,5 +1,6 @@
 #include "esp_idf_wifi_manager.hpp"
 
+// standard library
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <cstring>
@@ -8,12 +9,14 @@
 #include <string>
 #include <unordered_map>
 
+// esp-idf
 #include "esp_err.h"
 #include "esp_event.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "freertos/task.h"
 #include "lwip/sockets.h"
 #include "nvs_flash.h"
 #include "nvs_handle.hpp"
@@ -23,12 +26,37 @@
 #include "my_abort.hpp"
 #include "types.hpp"
 
+EspIdfWifiManager* EspIdfWifiManager::instance = nullptr;
+bool EspIdfWifiManager::dns_running = false;
+TaskHandle_t EspIdfWifiManager::dns_task = NULL;
+httpd_handle_t EspIdfWifiManager::http_server = NULL;
+esp_netif_obj* EspIdfWifiManager::ap_wifi = nullptr;
+std::string EspIdfWifiManager::ap_ssid = "";
+std::string EspIdfWifiManager::ap_password = "";
+
 const char* EspIdfWifiManager::TAG = "wifi_manager";
 void (*EspIdfWifiManager::get_config_callback)(wm_config) = nullptr;
 
+EspIdfWifiManager* EspIdfWifiManager::get_instance(
+    const std::string ap_ssid,
+    const std::string ap_password) {
+  if (EspIdfWifiManager::instance == nullptr) {
+    EspIdfWifiManager::instance = new EspIdfWifiManager(ap_ssid, ap_password);
+    return EspIdfWifiManager::instance;
+  } else if (EspIdfWifiManager::ap_ssid == ap_ssid &&
+             EspIdfWifiManager::ap_password == ap_password) {
+    return EspIdfWifiManager::instance;
+  } else {
+    my_abort();
+    return EspIdfWifiManager::instance;  // This is never reached
+  }
+}
+
 EspIdfWifiManager::EspIdfWifiManager(const std::string ap_ssid,
-                                     const std::string ap_password)
-    : ap_ssid{ap_ssid}, ap_password{ap_password} {
+                                     const std::string ap_password) {
+  EspIdfWifiManager::ap_ssid = ap_ssid;
+  EspIdfWifiManager::ap_password = ap_password;
+
   if (ap_ssid.size() > EspIdfWifiManagerConstants::MAX_SSID_SIZE ||
       ap_password.size() > EspIdfWifiManagerConstants::MAX_PASSWORD_SIZE) {
     ESP_LOGE(TAG, "ssid and password must be at most 31 characters");
@@ -53,7 +81,11 @@ EspIdfWifiManager::EspIdfWifiManager(const std::string ap_ssid,
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  esp_netif_create_default_wifi_ap();
+  ap_wifi = esp_netif_create_default_wifi_ap();
+}
+
+EspIdfWifiManager::~EspIdfWifiManager() {
+  shutdown_ap();
 }
 
 std::optional<wm_config> EspIdfWifiManager::get_config(
@@ -78,6 +110,10 @@ void EspIdfWifiManager::clear_config() {
 
   err = handle->erase_all();
   ESP_ERROR_CHECK(err);
+
+  config.ssid = "";
+  config.password = "";
+  config.id = "";
 }
 
 void EspIdfWifiManager::string_to_uint8_array(const std::string& str,
@@ -137,7 +173,7 @@ esp_err_t EspIdfWifiManager::save_page_handler(httpd_req_t* req) {
       if (config_opt.has_value()) {
         save_to_nvs(config_opt.value());
 
-        // TODO: Call callback
+        shutdown_ap();
         if (get_config_callback != nullptr) {
           get_config_callback(config_opt.value());
           get_config_callback = nullptr;
@@ -175,15 +211,14 @@ esp_err_t EspIdfWifiManager::http_404_error_handler(httpd_req_t* req,
 }
 
 void EspIdfWifiManager::start_web_server() {
-  httpd_handle_t server = NULL;
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   ESP_LOGD(TAG, "Starting server on port: '%d'", config.server_port);
-  ESP_ERROR_CHECK(httpd_start(&server, &config));
+  ESP_ERROR_CHECK(httpd_start(&http_server, &config));
 
   // Set URI handlers
-  httpd_register_uri_handler(server, &config_page);
-  httpd_register_uri_handler(server, &save_page);
-  httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
+  httpd_register_uri_handler(http_server, &config_page);
+  httpd_register_uri_handler(http_server, &save_page);
+  httpd_register_err_handler(http_server, HTTPD_404_NOT_FOUND,
                              EspIdfWifiManager::http_404_error_handler);
 }
 
@@ -286,9 +321,8 @@ void EspIdfWifiManager::dns_server_task(void* pvParameters) {
 }
 
 void EspIdfWifiManager::start_dns_server() {
-  struct dns_server_handle* handle =
-      (dns_server_handle*)calloc(1, sizeof(struct dns_server_handle));
-  xTaskCreate(dns_server_task, "dns_server", 4096, handle, 5, &handle->task);
+  dns_running = true;
+  xTaskCreate(dns_server_task, "dns_server", 4096, NULL, 5, &dns_task);
 }
 
 void EspIdfWifiManager::replace(std::string& in, const char o, const char n) {
@@ -415,4 +449,16 @@ bool EspIdfWifiManager::load_config() {
 
   config = loaded;
   return true;
+}
+
+void EspIdfWifiManager::shutdown_ap() {
+  dns_running = false;
+  if (dns_task) {
+    vTaskDelete(dns_task);
+    free(dns_task);
+  }
+  httpd_stop(http_server);
+  esp_wifi_stop();
+  esp_wifi_deinit();
+  esp_netif_destroy_default_wifi(ap_wifi);
 }

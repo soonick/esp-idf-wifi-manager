@@ -4,10 +4,6 @@
 #include <stdint.h>
 #include <string>
 
-struct dns_server_handle {
-  TaskHandle_t task;
-};
-
 struct dns_answer {
   uint16_t ptr_offset;
   uint16_t type;

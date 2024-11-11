@@ -4,5 +4,5 @@
  * Custom abort function so we can mock it for unit tests
  */
 void my_abort() {
-  throw 1;
+  throw "my_abort triggered";
 }
