@@ -5,9 +5,9 @@ idf_component_register(SRCS "src/assets.cpp"
                        EMBED_FILES assets/config_page.html
                                    assets/save_success_page.html
                        REQUIRES "esp_http_server"
+                                "esp_netif"
                                 "http_parser"
                        PRIV_REQUIRES "esp_event"
-                                     "esp_netif"
                                      "esp_wifi"
                                      "log"
                                      "lwip"
