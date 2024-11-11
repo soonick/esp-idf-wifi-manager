@@ -2,9 +2,24 @@ image:
 	@docker build -f dockerfiles/dev -t esp_idf_wifi_manager_image .
 .PHONY: image
 
-ssh: image
+ssh-connected: image
 	@docker run -it --rm \
 		--device /dev/ttyUSB0:/dev/ttyUSB0 \
+		-v $(PWD)/CMakeLists.txt:/esp-idf-wifi-manager/CMakeLists.txt \
+		-v $(PWD)/Makefile:/esp-idf-wifi-manager/Makefile \
+		-v $(PWD)/assets:/esp-idf-wifi-manager/assets \
+		-v $(PWD)/dockerfiles:/esp-idf-wifi-manager/dockerfiles \
+		-v $(PWD)/examples:/esp-idf-wifi-manager/examples \
+		-v $(PWD)/include:/esp-idf-wifi-manager/include \
+		-v $(PWD)/src:/esp-idf-wifi-manager/src \
+		-v $(PWD)/test:/esp-idf-wifi-manager/test \
+		-w /esp-idf-wifi-manager/ \
+		esp_idf_wifi_manager_image \
+		bash
+.PHONY: ssh-connected
+
+ssh: image
+	@docker run -it --rm \
 		-v $(PWD)/CMakeLists.txt:/esp-idf-wifi-manager/CMakeLists.txt \
 		-v $(PWD)/Makefile:/esp-idf-wifi-manager/Makefile \
 		-v $(PWD)/assets:/esp-idf-wifi-manager/assets \

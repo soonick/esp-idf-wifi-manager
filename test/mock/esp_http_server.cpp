@@ -55,6 +55,10 @@ esp_err_t httpd_start(httpd_handle_t* handle, const httpd_config_t* config) {
   return ESP_OK;
 }
 
+void httpd_stop(httpd_handle_t handle) {
+  (void)handle;
+}
+
 esp_err_t httpd_register_uri_handler(httpd_handle_t handle,
                                      const httpd_uri_t* uri_handler) {
   (void)handle;

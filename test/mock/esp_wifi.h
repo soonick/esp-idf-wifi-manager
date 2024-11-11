@@ -47,7 +47,10 @@ typedef union {
 } wifi_config_t;
 
 esp_netif_t* esp_netif_create_default_wifi_ap();
+void esp_netif_destroy_default_wifi(esp_netif_t* ap_wifi);
 esp_err_t esp_wifi_init(const wifi_init_config_t* config);
+void esp_wifi_deinit();
 esp_err_t esp_wifi_set_mode(wifi_mode_t mode);
 esp_err_t esp_wifi_set_config(wifi_interface_t interface, wifi_config_t* conf);
 esp_err_t esp_wifi_start();
+void esp_wifi_stop();

@@ -50,3 +50,4 @@ esp_err_t httpd_register_err_handler(httpd_handle_t handle,
                                      httpd_err_code_t error,
                                      httpd_err_handler_func_t handler_fn);
 esp_err_t httpd_start(httpd_handle_t* handle, const httpd_config_t* config);
+void httpd_stop(httpd_handle_t handle);

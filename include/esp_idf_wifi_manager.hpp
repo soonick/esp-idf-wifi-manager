@@ -1,11 +1,14 @@
 #pragma once
 
+// standard library
 #include <optional>
 #include <string>
 #include <unordered_map>
 
+// esp-idf
 #include "esp_err.h"
 #include "esp_http_server.h"
+#include "esp_netif.h"
 #include "http_parser.h"
 
 #include "types.hpp"
@@ -16,10 +19,24 @@ class EspIdfWifiManager {
   static void (*get_config_callback)(wm_config);
 
   /**
+   * Delete this constructor to make sure there can only be one instance
+   */
+  EspIdfWifiManager(EspIdfWifiManager const&) = delete;
+  void operator=(EspIdfWifiManager const&) = delete;
+
+  /**
+   * Sets up flash, the default event loop and netif. Creates default netif AP
+   *
    * @param - ap_ssid - The SSID that will be used for the created AP
    * @param - ap_password - The password for the created AP
    */
-  EspIdfWifiManager(const std::string ap_ssid, const std::string ap_password);
+  static EspIdfWifiManager* get_instance(const std::string ap_ssid,
+                                         const std::string ap_password);
+
+  /**
+   * Performs resources cleanup
+   */
+  ~EspIdfWifiManager();
 
   /**
    * If a config already exists in NVS, it will immediately return that config.
@@ -38,9 +55,12 @@ class EspIdfWifiManager {
    */
   void clear_config();
 
+  /**
+   * Shuts down servers and removes AP
+   */
+  static void shutdown_ap();
+
  private:
-  const std::string ap_ssid;
-  const std::string ap_password;
   const httpd_uri_t config_page = {.uri = "/",
                                    .method = HTTP_GET,
                                    .handler = config_page_handler,
@@ -50,6 +70,18 @@ class EspIdfWifiManager {
                                  .handler = save_page_handler,
                                  .user_ctx = NULL};
 
+  /**
+   * There can only be one instance of this class, and this is it
+   */
+  static EspIdfWifiManager* instance;
+
+  static std::string ap_ssid;
+  static std::string ap_password;
+  static bool dns_running;
+  static TaskHandle_t dns_task;
+  static httpd_handle_t http_server;
+  static esp_netif_obj* ap_wifi;
+
   wm_config config;
 
   static esp_err_t http_404_error_handler(httpd_req_t* req,
@@ -57,6 +89,14 @@ class EspIdfWifiManager {
   static esp_err_t config_page_handler(httpd_req_t* req);
   static esp_err_t save_page_handler(httpd_req_t* req);
   static void dns_server_task(void* pvParameters);
+
+  /**
+   * Sets up flash, the default event loop and netif. Creates default netif AP
+   *
+   * @param - ap_ssid - The SSID that will be used for the created AP
+   * @param - ap_password - The password for the created AP
+   */
+  EspIdfWifiManager(const std::string ap_ssid, const std::string ap_password);
 
   /**
    * Replace all ocurrences of a character in a string
