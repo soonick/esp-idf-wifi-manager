@@ -173,7 +173,6 @@ esp_err_t EspIdfWifiManager::save_page_handler(httpd_req_t* req) {
       if (config_opt.has_value()) {
         save_to_nvs(config_opt.value());
 
-        shutdown_ap();
         if (get_config_callback != nullptr) {
           get_config_callback(config_opt.value());
           get_config_callback = nullptr;
