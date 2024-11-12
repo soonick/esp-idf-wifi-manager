@@ -6,6 +6,7 @@ idf_component_register(SRCS "src/assets.cpp"
                                    assets/save_success_page.html
                        REQUIRES "esp_http_server"
                                 "esp_netif"
+                                "esp_timer"
                                 "http_parser"
                        PRIV_REQUIRES "esp_event"
                                      "esp_wifi"
