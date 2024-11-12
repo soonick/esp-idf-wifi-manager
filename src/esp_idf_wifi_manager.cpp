@@ -15,6 +15,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_netif.h"
+#include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/task.h"
 #include "lwip/sockets.h"
@@ -33,6 +34,14 @@ httpd_handle_t EspIdfWifiManager::http_server = NULL;
 esp_netif_obj* EspIdfWifiManager::ap_wifi = nullptr;
 std::string EspIdfWifiManager::ap_ssid = "";
 std::string EspIdfWifiManager::ap_password = "";
+esp_timer_create_args_t EspIdfWifiManager::timer_args = {
+    .callback = &EspIdfWifiManager::configuration_callback,
+    .arg = NULL,
+    .dispatch_method = ESP_TIMER_TASK,
+    .name = "configuration_callback",
+    .skip_unhandled_events = false};
+wm_config EspIdfWifiManager::config = wm_config{};
+int EspIdfWifiManager::sock = 0;
 
 const char* EspIdfWifiManager::TAG = "wifi_manager";
 void (*EspIdfWifiManager::get_config_callback)(wm_config) = nullptr;
@@ -78,10 +87,7 @@ EspIdfWifiManager::EspIdfWifiManager(const std::string ap_ssid,
 
   load_config();
 
-  ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-  ap_wifi = esp_netif_create_default_wifi_ap();
 }
 
 EspIdfWifiManager::~EspIdfWifiManager() {
@@ -123,6 +129,9 @@ void EspIdfWifiManager::string_to_uint8_array(const std::string& str,
 }
 
 void EspIdfWifiManager::init_ap() {
+  ESP_ERROR_CHECK(esp_netif_init());
+  ap_wifi = esp_netif_create_default_wifi_ap();
+
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
@@ -173,15 +182,23 @@ esp_err_t EspIdfWifiManager::save_page_handler(httpd_req_t* req) {
       if (config_opt.has_value()) {
         save_to_nvs(config_opt.value());
 
-        if (get_config_callback != nullptr) {
-          get_config_callback(config_opt.value());
-          get_config_callback = nullptr;
-        }
-
         ESP_LOGD(TAG, "Serve save success page");
         const uint32_t save_page_len =
             get_save_page_end() - get_save_page_start();
         httpd_resp_send(req, get_save_page_start(), save_page_len);
+
+        esp_timer_handle_t timer;
+        esp_err_t err = esp_timer_create(&timer_args, &timer);
+
+        if (err != ESP_OK) {
+          ESP_LOGE(TAG, "Failed to create timer");
+        } else {
+          err = esp_timer_start_once(timer,
+                                     3000000);  // 3 seconds in microseconds
+          if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to start timer");
+          }
+        }
       } else {
         ESP_LOGD(TAG, "Serve save success page");
         const uint32_t config_page_len =
@@ -231,7 +248,7 @@ void EspIdfWifiManager::dns_server_task(void* pvParameters) {
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(53);
 
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (sock < 0) {
       ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
       break;
@@ -402,6 +419,8 @@ void EspIdfWifiManager::save_to_nvs(const wm_config& config) {
 
   err = handle->commit();
   ESP_ERROR_CHECK(err);
+
+  EspIdfWifiManager::config = config;
 }
 
 bool EspIdfWifiManager::load_config() {
@@ -454,10 +473,20 @@ void EspIdfWifiManager::shutdown_ap() {
   dns_running = false;
   if (dns_task) {
     vTaskDelete(dns_task);
-    free(dns_task);
   }
   httpd_stop(http_server);
+  shutdown(sock, 0);
+  close(sock);
   esp_wifi_stop();
-  esp_wifi_deinit();
   esp_netif_destroy_default_wifi(ap_wifi);
+  esp_wifi_deinit();
+}
+
+void EspIdfWifiManager::configuration_callback(void* arg) {
+  (void)arg;
+
+  if (get_config_callback != nullptr) {
+    get_config_callback(config);
+    get_config_callback = nullptr;
+  }
 }

@@ -1,3 +1,5 @@
 /examples/basic/build/
 /examples/basic/sdkconfig*
+/examples/clear-config/build/
+/examples/clear-config/sdkconfig*
 /test/build/

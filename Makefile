@@ -94,6 +94,7 @@ format: image
 		esp_idf_wifi_manager_image \
 		sh -c "find . \
 			-path './examples/basic/build' -prune -o \
+			-path './examples/clear-config/build' -prune -o \
 			-path './test/build' -prune -o \
 			-path './test/external' -prune -o \
 			\( -iname '*.hpp' -o -iname '*.cpp' -o -iname '*.h' -o -iname '*.c' \) -print | \
@@ -113,6 +114,7 @@ check-format: image
 		esp_idf_wifi_manager_image \
 		sh -c "find . \
 			-path './examples/basic/build' -prune -o \
+			-path './examples/clear-config/build' -prune -o \
 			-path './test/build' -prune -o \
 			-path './test/external' -prune -o \
 			\( -iname '*.hpp' -o -iname '*.cpp' -o -iname '*.h' -o -iname '*.c' \) -print | \

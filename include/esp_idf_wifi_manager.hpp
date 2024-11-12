@@ -9,6 +9,7 @@
 #include "esp_err.h"
 #include "esp_http_server.h"
 #include "esp_netif.h"
+#include "esp_timer.h"
 #include "http_parser.h"
 
 #include "types.hpp"
@@ -81,8 +82,10 @@ class EspIdfWifiManager {
   static TaskHandle_t dns_task;
   static httpd_handle_t http_server;
   static esp_netif_obj* ap_wifi;
+  static esp_timer_create_args_t timer_args;
+  static int sock;
 
-  wm_config config;
+  static wm_config config;
 
   static esp_err_t http_404_error_handler(httpd_req_t* req,
                                           httpd_err_code_t err);
@@ -133,6 +136,12 @@ class EspIdfWifiManager {
    * @return true if load was succesful, false otherwise
    */
   bool load_config();
+
+  /**
+   * Called after a configuration has been set in NVS. Notifies client that a
+   * new configuration is ready
+   */
+  static void configuration_callback(void* arg);
 
   void init_ap();
   void start_web_server();
