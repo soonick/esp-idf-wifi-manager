@@ -7,3 +7,6 @@
 #define ESP_LOGI(tag, format, ...)           \
   printf(format __VA_OPT__(, ) __VA_ARGS__); \
   printf("\n");
+#define ESP_LOGW(tag, format, ...)           \
+  printf(format __VA_OPT__(, ) __VA_ARGS__); \
+  printf("\n");
