@@ -78,12 +78,13 @@ EspIdfWifiManager::EspIdfWifiManager(const std::string ap_ssid,
   }
 
   esp_err_t err = nvs_flash_init();
-  if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
-      err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+  while (err == ESP_ERR_NVS_NO_FREE_PAGES ||
+         err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_LOGW(TAG, "nvs_flash_init() failed. Re-trying");
     ESP_ERROR_CHECK(nvs_flash_erase());
     err = nvs_flash_init();
   }
-  ESP_ERROR_CHECK(err);
+  ESP_LOGI(TAG, "nvs_flash_init() succeeded");
 
   load_config();
 
@@ -433,7 +434,25 @@ bool EspIdfWifiManager::load_config() {
   esp_err_t err;
   std::unique_ptr<nvs::NVSHandle> handle = nvs::open_nvs_handle(
       EspIdfWifiManagerConstants::NVS_NAMESPACE.c_str(), NVS_READONLY, &err);
-  ESP_ERROR_CHECK(err);
+
+  // If the namespace has never been used before, this error is sometimes
+  // thrown. We write some data to make sure the namespace exists
+  if (err == ESP_ERR_NVS_NOT_FOUND) {
+    std::unique_ptr<nvs::NVSHandle> handle = nvs::open_nvs_handle(
+        EspIdfWifiManagerConstants::NVS_NAMESPACE.c_str(), NVS_READWRITE, &err);
+    ESP_ERROR_CHECK(err);
+
+    // Write some data to ensure the namespace is initialized.
+    err = handle->set_string("example_key", "example_value");
+    ESP_ERROR_CHECK(err);
+
+    err = handle->commit();
+    ESP_ERROR_CHECK(err);
+
+    return false;
+  } else {
+    ESP_ERROR_CHECK(err);
+  }
 
   err = handle->get_string(EspIdfWifiManagerConstants::SSID_KEY.c_str(),
                            ssid.get(), 100);
