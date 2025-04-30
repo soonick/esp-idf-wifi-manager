@@ -51,3 +51,7 @@ esp_err_t httpd_register_err_handler(httpd_handle_t handle,
                                      httpd_err_handler_func_t handler_fn);
 esp_err_t httpd_start(httpd_handle_t* handle, const httpd_config_t* config);
 void httpd_stop(httpd_handle_t handle);
+esp_err_t httpd_req_get_hdr_value_str(httpd_req_t* r,
+                                      const char* header,
+                                      char* buf,
+                                      size_t buf_len);

@@ -158,13 +158,31 @@ void EspIdfWifiManager::init_ap() {
   ESP_LOGD(TAG, "Set up softAP with IP: %s", ip_addr);
 }
 
+std::string EspIdfWifiManager::get_accept_language(httpd_req_t* req) {
+  char accept_language[64];
+
+  if (httpd_req_get_hdr_value_str(req, "Accept-Language", accept_language,
+                                  sizeof(accept_language)) == ESP_OK) {
+    std::string lang(accept_language);
+    if (lang.size() < 2) {
+      return "en";
+    }
+
+    return lang.substr(0, 2);
+  }
+
+  return "en";
+}
+
 esp_err_t EspIdfWifiManager::config_page_handler(httpd_req_t* req) {
+  const std::string lang = get_accept_language(req);
+
   const uint32_t config_page_len =
-      get_config_page_end() - get_config_page_start();
+      get_config_page_end(lang) - get_config_page_start(lang);
 
   ESP_LOGD(TAG, "Serve config page");
   httpd_resp_set_type(req, "text/html");
-  httpd_resp_send(req, get_config_page_start(), config_page_len);
+  httpd_resp_send(req, get_config_page_start(lang), config_page_len);
 
   return ESP_OK;
 }
@@ -179,14 +197,15 @@ esp_err_t EspIdfWifiManager::save_page_handler(httpd_req_t* req) {
       const std::string query_str(buf);
       std::optional<wm_config> config_opt = config_from_path(query_str);
 
+      const std::string lang = get_accept_language(req);
       httpd_resp_set_type(req, "text/html");
       if (config_opt.has_value()) {
         save_to_nvs(config_opt.value());
 
         ESP_LOGD(TAG, "Serve save success page");
         const uint32_t save_page_len =
-            get_save_page_end() - get_save_page_start();
-        httpd_resp_send(req, get_save_page_start(), save_page_len);
+            get_save_page_end(lang) - get_save_page_start(lang);
+        httpd_resp_send(req, get_save_page_start(lang), save_page_len);
 
         esp_timer_handle_t timer;
         esp_err_t err = esp_timer_create(&timer_args, &timer);
@@ -203,8 +222,8 @@ esp_err_t EspIdfWifiManager::save_page_handler(httpd_req_t* req) {
       } else {
         ESP_LOGD(TAG, "Serve save success page");
         const uint32_t config_page_len =
-            get_config_page_end() - get_config_page_start();
-        httpd_resp_send(req, get_config_page_start(), config_page_len);
+            get_config_page_end(lang) - get_config_page_start(lang);
+        httpd_resp_send(req, get_config_page_start(lang), config_page_len);
       }
     }
     free(buf);
