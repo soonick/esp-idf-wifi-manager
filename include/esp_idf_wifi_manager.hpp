@@ -143,6 +143,12 @@ class EspIdfWifiManager {
    */
   static void configuration_callback(void* arg);
 
+  /**
+   * Given a request, it returns the language of the request, based on the
+   * Accept-Languae header
+   */
+  static std::string get_accept_language(httpd_req_t* req);
+
   void init_ap();
   void start_web_server();
   void start_dns_server();

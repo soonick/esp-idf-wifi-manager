@@ -15,6 +15,18 @@ esp_err_t httpd_resp_send(httpd_req_t* r, const char* buf, ssize_t buf_len) {
   return ESP_OK;
 }
 
+esp_err_t httpd_req_get_hdr_value_str(httpd_req_t* r,
+                                      const char* header,
+                                      char* buf,
+                                      size_t buf_len) {
+  (void)r;
+  (void)buf;
+  (void)header;
+  (void)buf_len;
+
+  return ESP_OK;
+}
+
 size_t httpd_req_get_url_query_len(httpd_req_t* r) {
   (void)r;
 

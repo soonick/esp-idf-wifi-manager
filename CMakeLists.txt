@@ -2,8 +2,10 @@ idf_component_register(SRCS "src/assets.cpp"
                             "src/esp_idf_wifi_manager.cpp"
                             "src/my_abort.cpp"
                        INCLUDE_DIRS "include"
-                       EMBED_FILES assets/config_page.html
-                                   assets/save_success_page.html
+                       EMBED_FILES assets/en/config_page_en.html
+                                   assets/en/save_success_page_en.html
+                                   assets/es/config_page_es.html
+                                   assets/es/save_success_page_es.html
                        REQUIRES "esp_http_server"
                                 "esp_netif"
                                 "esp_timer"
